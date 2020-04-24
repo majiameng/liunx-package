@@ -1,0 +1,82 @@
+diff --git a/README.eurephia b/README.eurephia
+new file mode 100644
+index 0000000..1f3ddf8
+--- /dev/null
++++ b/README.eurephia
+@@ -0,0 +1,24 @@
++
++  OpenVPN - eurephia version
++==============================
++
++This is the official OpenVPN version, patched with a
++patch to implement one needed feature for the eurephia
++plug-in.
++
++All this patch does is to provide the plug-in environment
++with a variable containing the SHA1 hash of the
++certificates in use for the session.
++
++eurephia is an authentication and security plug-in which
++enhances the security in OpenVPN even more.  It provides
++user name/password authentication, automatic blacklisting
++of user account, certificates and IP addresses.  In
++provides in addition automatic updates of the iptables
++firewall on Linux, with specific iptables profile per
++user and certificate.
++
++For more information about eurephia, have a look at:
++
++             http://www.eurephia.net/
++
+diff --git a/options.c b/options.c
+index 183c21a..f992b2c 100644
+--- a/options.c
++++ b/options.c
+@@ -7,6 +7,9 @@
+  *
+  *  Copyright (C) 2002-2009 OpenVPN Technologies, Inc. <sales@openvpn.net>
+  *
++ *  Additions for eurephia plugin done by:
++ *         David Sommerseth <dazo@users.sourceforge.net> Copyright (C) 2009
++ *
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License version 2
+  *  as published by the Free Software Foundation.
+@@ -73,6 +76,7 @@ const char title_string[] =
+ #ifdef ENABLE_PKCS11
+   " [PKCS11]"
+ #endif
++  " [eurephia]"
+   " built on " __DATE__
+ ;
+ 
+diff --git a/ssl.c b/ssl.c
+index d882c94..6b44004 100644
+--- a/ssl.c
++++ b/ssl.c
+@@ -7,6 +7,10 @@
+  *
+  *  Copyright (C) 2002-2009 OpenVPN Technologies, Inc. <sales@openvpn.net>
+  *
++ *  Additions for eurephia plugin done by:
++ *         David Sommerseth <dazo@users.sourceforge.net> Copyright (C) 2008-2009
++ *
++ *
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License version 2
+  *  as published by the Free Software Foundation.
+@@ -777,6 +781,14 @@ verify_callback (int preverify_ok, X509_STORE_CTX * ctx)
+   openvpn_snprintf (envname, sizeof(envname), "tls_id_%d", ctx->error_depth);
+   setenv_str (opt->es, envname, subject);
+ 
++  /* export X509 cert SHA1 fingerprint */
++  {
++    struct gc_arena gc = gc_new ();
++    openvpn_snprintf (envname, sizeof(envname), "tls_digest_%d", ctx->error_depth);
++    setenv_str (opt->es, envname,
++		format_hex_ex(ctx->current_cert->sha1_hash, SHA_DIGEST_LENGTH, 0, 1, ":", &gc));
++    gc_free(&gc);
++  }
+ #if 0
+   /* export common name string as environmental variable */
+   openvpn_snprintf (envname, sizeof(envname), "tls_common_name_%d", ctx->error_depth);
